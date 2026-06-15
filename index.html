@@ -401,7 +401,7 @@
 
         async function initializePortal() {
             // Validate credentials
-            if (SUPABASE_URL === "https://xsntujvkvmwjdbrfmkox.supabase.co" || SUPABASE_ANON_KEY === "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzbnR1anZrdm13amRicmZta294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MjA5MTEsImV4cCI6MjA5NzA5NjkxMX0.eAv5GvF2uzSNQ8hbsb7deDZlEvoS3qc92-_slJz56KQ") {
+            if (SUPABASE_URL === "YOUR_SUPABASE_URL" || SUPABASE_ANON_KEY === "YOUR_SUPABASE_ANON_KEY") {
                 showError("Supabase Configuration is missing. Please configure your Supabase URL and Key in index.html/referral_portal.html.");
                 document.getElementById('btn-submit').disabled = true;
                 return;
