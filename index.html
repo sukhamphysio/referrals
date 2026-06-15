@@ -490,6 +490,28 @@
             }
         }
 
+        function getFirstAndLast(fullName) {
+            if (!fullName) return { first: '', last: '' };
+            let n = fullName.toLowerCase().trim();
+            const prefixes = ["dr.", "dr", "pt.", "pt", "mr.", "mr", "mrs.", "mrs", "ms.", "ms"];
+            for (const prefix of prefixes) {
+                if (n.startsWith(prefix + " ")) {
+                    n = n.substring(prefix.length + 1).trim();
+                    break;
+                } else if (n.startsWith(prefix)) {
+                    n = n.substring(prefix.length).trim();
+                    break;
+                }
+            }
+            const parts = n.split(/\s+/).filter(Boolean);
+            if (parts.length === 0) {
+                return { first: '', last: '' };
+            }
+            const first = parts[0];
+            const last = parts.slice(1).join(' ');
+            return { first, last };
+        }
+
         async function handleFormSubmit(event) {
             event.preventDefault();
             hideError();
@@ -520,6 +542,35 @@
             const pReferredFor = document.getElementById('patient-referred-for').value.trim();
 
             const fullName = `${pPrefix} ${pName}`.trim();
+
+            // Check for identical first and last name
+            const names = getFirstAndLast(fullName);
+            if (names.first && names.last && names.first.toLowerCase() === names.last.toLowerCase()) {
+                showError("Duplicate Entry Alert: Patient cannot have the same first and last name.");
+                return;
+            }
+
+            // Check for existing duplicate referral
+            try {
+                const { data: existingRefs, error: checkError } = await supabaseClient
+                    .from('referrals')
+                    .select('patient_name')
+                    .eq('is_deleted', 0);
+                if (checkError) throw checkError;
+
+                if (existingRefs) {
+                    const isDup = existingRefs.some(ref => {
+                        const ext = getFirstAndLast(ref.patient_name);
+                        return ext.first.toLowerCase() === names.first.toLowerCase() && ext.last.toLowerCase() === names.last.toLowerCase();
+                    });
+                    if (isDup) {
+                        showError("Duplicate Entry Alert: You are trying to post a duplicate entry of referral.");
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.error("Duplicate check error:", e);
+            }
 
             // Set UI loading state
             const btn = document.getElementById('btn-submit');
