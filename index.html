@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Referral Portal - Sukham Physiotherapy</title>
+    <!-- Google Fonts for premium typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --color-primary: #5B3A82;     /* Lavender Purple */
+            --color-primary-dark: #3B1E54;/* Deep Purple */
+            --color-accent: #00ADB5;      /* Professional Teal Accent */
+            --color-accent-light: rgba(0, 173, 181, 0.15);
+            --color-background: #250050;  /* Midnight Purple */
+            --color-card-bg: rgba(255, 255, 255, 0.04);
+            --color-card-border: rgba(255, 255, 255, 0.08);
+            --color-text: #FFFFFF;
+            --color-text-muted: rgba(255, 255, 255, 0.6);
+            --border-radius-lg: 16px;
+            --border-radius-md: 8px;
+            --transition-normal: 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--color-background);
+            background-image: 
+                radial-gradient(at 10% 20%, rgba(91, 58, 130, 0.3) 0px, transparent 50%),
+                radial-gradient(at 90% 80%, rgba(0, 173, 181, 0.15) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: var(--color-text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .portal-container {
+            width: 100%;
+            max-width: 580px;
+            background: var(--color-card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--color-card-border);
+            border-radius: var(--border-radius-lg);
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            transition: var(--transition-normal);
+        }
+
+        .portal-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo-placeholder {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            box-shadow: 0 8px 16px rgba(0, 173, 181, 0.2);
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--color-text-muted);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .doctor-badge {
+            background: var(--color-accent-light);
+            border: 1px solid var(--color-accent);
+            color: var(--color-accent);
+            padding: 8px 14px;
+            border-radius: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--color-text-muted);
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="url"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: var(--border-radius-md);
+            border: 1px solid var(--color-card-border);
+            background: rgba(0, 0, 0, 0.2);
+            color: var(--color-text);
+            font-size: 14px;
+            outline: none;
+            transition: var(--transition-normal);
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--color-accent);
+            box-shadow: 0 0 0 3px var(--color-accent-light);
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .row .form-group {
+            flex: 1;
+        }
+
+        .gender-age-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 15px;
+        }
+
+        textarea {
+            resize: vertical;
+        }
+
+        .btn-submit {
+            width: 100%;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+            color: #fff;
+            padding: 14px;
+            border: none;
+            border-radius: var(--border-radius-md);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(91, 58, 130, 0.3);
+            transition: var(--transition-normal);
+            margin-top: 10px;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(91, 58, 130, 0.4);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        /* Success Card View */
+        .success-view {
+            display: none;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .checkmark-wrapper {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: rgba(0, 173, 181, 0.1);
+            border: 2px solid var(--color-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            color: var(--color-accent);
+            animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes scaleIn {
+            from { transform: scale(0); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .btn-reset {
+            background: transparent;
+            border: 1px solid var(--color-card-border);
+            color: var(--color-text-muted);
+            padding: 10px 20px;
+            border-radius: var(--border-radius-md);
+            cursor: pointer;
+            font-size: 13px;
+            margin-top: 25px;
+            transition: var(--transition-normal);
+        }
+
+        .btn-reset:hover {
+            color: var(--color-text);
+            border-color: rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.02);
+        }
+
+        /* Loading Spinner */
+        .loader {
+            display: none;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top: 3px solid var(--color-accent);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 15px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            color: #FF5C5C;
+            background: rgba(255, 92, 92, 0.1);
+            border: 1px solid #FF5C5C;
+            padding: 12px;
+            border-radius: var(--border-radius-md);
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        @media (max-width: 480px) {
+            .portal-container {
+                padding: 20px;
+            }
+            .gender-age-row {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="portal-container">
+        <!-- Error alert -->
+        <div id="error-alert" class="error-message"></div>
+
+        <!-- Success screen -->
+        <div id="success-screen" class="success-view">
+            <div class="checkmark-wrapper">
+                <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+            </div>
+            <h2 style="font-family: 'Outfit', sans-serif; font-size: 22px; margin-bottom: 10px;">Referral Submitted!</h2>
+            <p class="subtitle" style="max-width: 400px; margin: 0 auto;">Thank you for referring your patient. The record has been successfully transmitted to the Sukham Physiotherapy ERP. We will contact them shortly.</p>
+            <button class="btn-reset" onclick="resetForm()">Submit Another Referral</button>
+        </div>
+
+        <!-- Main Form screen -->
+        <div id="form-screen">
+            <div class="portal-header">
+                <div class="logo-placeholder">S</div>
+                <h1>Sukham Physiotherapy and Rehab</h1>
+                <p class="subtitle">Patient Referral Portal</p>
+                <div id="doctor-info-badge" class="doctor-badge" style="display: none;">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <span id="doctor-name-label">Loading doctor profile...</span>
+                </div>
+            </div>
+
+            <form id="frm-referral" onsubmit="handleFormSubmit(event)">
+                <!-- Manual Doctor Selector (displayed only if no URL param or invalid) -->
+                <div class="form-group" id="doctor-select-group">
+                    <label for="doctor-select">Referring Doctor Name <span style="color: var(--color-accent);">*</span></label>
+                    <select id="doctor-select" required>
+                        <option value="">Select Doctor</option>
+                    </select>
+                </div>
+
+                <!-- Patient name row -->
+                <div class="row">
+                    <div class="form-group" style="flex: 0 0 110px;">
+                        <label for="patient-prefix">Prefix</label>
+                        <select id="patient-prefix">
+                            <option value="Mr.">Mr.</option>
+                            <option value="Mrs.">Mrs.</option>
+                            <option value="Ms.">Ms.</option>
+                            <option value="Master">Master</option>
+                            <option value="Baby">Baby</option>
+                            <option value="Dr.">Dr.</option>
+                            <option value="Pt.">Pt.</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="patient-name">Patient Full Name <span style="color: var(--color-accent);">*</span></label>
+                        <input type="text" id="patient-name" placeholder="e.g. Rahul Sharma" required>
+                    </div>
+                </div>
+
+                <!-- Age & Gender row -->
+                <div class="gender-age-row">
+                    <div class="form-group">
+                        <label for="patient-gender">Gender</label>
+                        <select id="patient-gender">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="patient-age">Age (Yrs)</label>
+                        <input type="number" id="patient-age" min="0" max="120" placeholder="e.g. 32">
+                    </div>
+                </div>
+
+                <!-- Contact phone number -->
+                <div class="form-group">
+                    <label for="patient-contact">Patient Mobile Number (10 digits) <span style="color: var(--color-accent);">*</span></label>
+                    <input type="text" id="patient-contact" placeholder="e.g. 9876543210" required pattern="^[0-9]{10}$" title="Please enter exactly 10 numeric digits.">
+                </div>
+
+                <!-- Diagnosis / Complaints -->
+                <div class="form-group">
+                    <label for="patient-condition">Clinical Condition / Chief Complaints</label>
+                    <textarea id="patient-condition" rows="3" placeholder="e.g. Lower back pain radiating down left leg, diagnosed with Sciatica..."></textarea>
+                </div>
+
+                <!-- Referred For -->
+                <div class="form-group">
+                    <label for="patient-referred-for">Referred For (Treatments / Recommendations)</label>
+                    <input type="text" id="patient-referred-for" placeholder="e.g. Decompression therapy, general physiotherapy" value="Physiotherapy">
+                </div>
+
+                <div class="loader" id="submit-loader"></div>
+                <button type="submit" class="btn-submit" id="btn-submit">Submit Patient Referral</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Supabase configuration - these will be populated by replacing the placeholders OR dynamically queried if you configure them!
+        // In local testing, you can input your details. When deploying, configure these variables!
+        const SUPABASE_URL = "https://xsntujvkvmwjdbrfmkox.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzbnR1anZrdm13amRicmZta294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MjA5MTEsImV4cCI6MjA5NzA5NjkxMX0.eAv5GvF2uzSNQ8hbsb7deDZlEvoS3qc92-_slJz56KQ";
+
+        let supabase = null;
+        let selectedDoctorId = null;
+
+        function getQueryParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        function showError(message) {
+            const el = document.getElementById('error-alert');
+            el.innerText = message;
+            el.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function hideError() {
+            document.getElementById('error-alert').style.display = 'none';
+        }
+
+        async function initializePortal() {
+            // Validate credentials
+            if (SUPABASE_URL === "https://xsntujvkvmwjdbrfmkox.supabase.co" || SUPABASE_ANON_KEY === "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzbnR1anZrdm13amRicmZta294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MjA5MTEsImV4cCI6MjA5NzA5NjkxMX0.eAv5GvF2uzSNQ8hbsb7deDZlEvoS3qc92-_slJz56KQ") {
+                showError("Supabase Configuration is missing. Please configure your Supabase URL and Key in index.html/referral_portal.html.");
+                document.getElementById('btn-submit').disabled = true;
+                return;
+            }
+
+            try {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                
+                // Load active doctor directory to populate dropdown list
+                const { data: doctors, error } = await supabase.from('doctors').select('id, name').eq('is_deleted', 0).order('name', { ascending: true });
+                if (error) throw error;
+
+                const selectEl = document.getElementById('doctor-select');
+                doctors.forEach(doc => {
+                    const opt = document.createElement('option');
+                    opt.value = doc.id;
+                    opt.innerText = doc.name;
+                    selectEl.appendChild(opt);
+                });
+
+                // Check doc_id query parameter
+                const docId = getQueryParam('doc_id');
+                if (docId) {
+                    const parsedId = parseInt(docId);
+                    const docMatch = doctors.find(d => d.id === parsedId);
+
+                    if (docMatch) {
+                        selectedDoctorId = parsedId;
+                        document.getElementById('doctor-name-label').innerText = `Dr. ${docMatch.name}`;
+                        document.getElementById('doctor-info-badge').style.display = 'inline-flex';
+                        document.getElementById('doctor-select-group').style.display = 'none';
+                        document.getElementById('doctor-select').required = false;
+                    }
+                }
+            } catch (e) {
+                console.error("Portal Initialization Error:", e);
+                showError("Failed to connect to the clinic database. Details: " + e.message);
+            }
+        }
+
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            hideError();
+
+            if (!supabase) {
+                showError("Database connection not established.");
+                return;
+            }
+
+            // Set doctor ID
+            let finalDocId = selectedDoctorId;
+            if (!finalDocId) {
+                const selectEl = document.getElementById('doctor-select');
+                if (!selectEl.value) {
+                    showError("Please select your referring doctor profile.");
+                    return;
+                }
+                finalDocId = parseInt(selectEl.value);
+            }
+
+            // Gather inputs
+            const pPrefix = document.getElementById('patient-prefix').value;
+            const pName = document.getElementById('patient-name').value.trim();
+            const pAge = document.getElementById('patient-age').value;
+            const pGender = document.getElementById('patient-gender').value;
+            const pContact = document.getElementById('patient-contact').value.trim();
+            const pCondition = document.getElementById('patient-condition').value.trim();
+            const pReferredFor = document.getElementById('patient-referred-for').value.trim();
+
+            const fullName = `${pPrefix} ${pName}`.trim();
+
+            // Set UI loading state
+            const btn = document.getElementById('btn-submit');
+            const loader = document.getElementById('submit-loader');
+            btn.disabled = true;
+            loader.style.display = 'block';
+
+            try {
+                const referralData = {
+                    doctor_id: finalDocId,
+                    patient_name: fullName,
+                    gender: pGender,
+                    age: pAge ? parseInt(pAge) : null,
+                    contact: pContact,
+                    condition: pCondition || null,
+                    referred_for: pReferredFor || 'Physiotherapy',
+                    submitted_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
+                    status: 'Pending',
+                    is_deleted: 0
+                };
+
+                const { error } = await supabase.from('referrals').insert(referralData);
+                if (error) throw error;
+
+                // Show success screen
+                document.getElementById('form-screen').style.display = 'none';
+                document.getElementById('success-screen').style.display = 'block';
+            } catch (e) {
+                console.error("Submission Error:", e);
+                showError("Failed to submit referral: " + e.message);
+            } finally {
+                btn.disabled = false;
+                loader.style.display = 'none';
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('frm-referral').reset();
+            document.getElementById('success-screen').style.display = 'none';
+            document.getElementById('form-screen').style.display = 'block';
+            hideError();
+        }
+
+        // Initialize portal on load
+        window.addEventListener('load', initializePortal);
+    </script>
+</body>
+</html>
