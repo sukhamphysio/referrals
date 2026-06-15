@@ -402,43 +402,66 @@
         async function initializePortal() {
             // Validate credentials
             if (SUPABASE_URL === "YOUR_SUPABASE_URL" || SUPABASE_ANON_KEY === "YOUR_SUPABASE_ANON_KEY") {
-                showError("Supabase Configuration is missing. Please configure your Supabase URL and Key in index.html/referral_portal.html.");
+                showError("Supabase Configuration is missing. Please configure your Supabase URL and Key in index.html.");
                 document.getElementById('btn-submit').disabled = true;
                 return;
             }
-
+ 
+            // Check doc_id, doctor_id, or doc query parameter
+            const docId = getQueryParam('doc_id') || getQueryParam('doctor_id') || getQueryParam('doc');
+            
+            if (!docId) {
+                document.getElementById('frm-referral').style.display = 'none';
+                document.getElementById('doctor-info-badge').style.display = 'none';
+                showError("Personalized Link Required. Please use the direct referral link provided by Sukham Physiotherapy.");
+                return;
+            }
+ 
+            const parsedId = parseInt(docId);
+            if (isNaN(parsedId)) {
+                document.getElementById('frm-referral').style.display = 'none';
+                showError("Invalid referral link. The link format is incorrect.");
+                return;
+            }
+ 
             try {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 
-                // Load active doctor directory to populate dropdown list
-                const { data: doctors, error } = await supabaseClient.from('doctors').select('id, name').eq('is_deleted', 0).order('name', { ascending: true });
+                // Fetch ONLY the specified doctor from Supabase
+                const { data: doctor, error } = await supabaseClient
+                    .from('doctors')
+                    .select('id, name')
+                    .eq('id', parsedId)
+                    .eq('is_deleted', 0)
+                    .maybeSingle();
+ 
                 if (error) throw error;
-
-                const selectEl = document.getElementById('doctor-select');
-                doctors.forEach(doc => {
-                    const opt = document.createElement('option');
-                    opt.value = doc.id;
-                    opt.innerText = doc.name;
-                    selectEl.appendChild(opt);
-                });
-
-                // Check doc_id, doctor_id, or doc query parameter
-                const docId = getQueryParam('doc_id') || getQueryParam('doctor_id') || getQueryParam('doc');
-                if (docId) {
-                    const parsedId = parseInt(docId);
-                    // Loose equality (==) allows matching string vs number representation
-                    const docMatch = doctors.find(d => d.id == parsedId || d.id == docId);
-
-                    if (docMatch) {
-                        selectedDoctorId = docMatch.id;
-                        document.getElementById('doctor-name-label').innerText = `Dr. ${docMatch.name}`;
-                        document.getElementById('doctor-info-badge').style.display = 'inline-flex';
-                        document.getElementById('doctor-select-group').style.display = 'none';
-                        document.getElementById('doctor-select').required = false;
-                    }
+ 
+                if (!doctor) {
+                    document.getElementById('frm-referral').style.display = 'none';
+                    showError("Invalid referral link. The referring doctor profile was not found.");
+                    return;
+                }
+ 
+                selectedDoctorId = doctor.id;
+                
+                // Clean Dr. prefix formatting
+                let displayName = doctor.name.trim();
+                if (!displayName.toLowerCase().startsWith('dr.')) {
+                    displayName = `Dr. ${displayName}`;
+                }
+                
+                document.getElementById('doctor-name-label').innerText = displayName;
+                document.getElementById('doctor-info-badge').style.display = 'inline-flex';
+                
+                // Completely remove the doctor selector from the DOM for security
+                const selectGroup = document.getElementById('doctor-select-group');
+                if (selectGroup) {
+                    selectGroup.remove();
                 }
             } catch (e) {
                 console.error("Portal Initialization Error:", e);
+                document.getElementById('frm-referral').style.display = 'none';
                 showError("Failed to connect to the clinic database. Details: " + e.message);
             }
         }
