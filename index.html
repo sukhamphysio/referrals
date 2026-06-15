@@ -388,6 +388,30 @@
             return urlParams.get(name);
         }
 
+        async function getIndianTime() {
+            try {
+                // Try fetching from a public world time API (Asia/Kolkata) with a 2-second timeout
+                const res = await fetch('https://worldtimeapi.org/api/timezone/Asia/Kolkata', { signal: AbortSignal.timeout(2000) });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.datetime) {
+                        return data.datetime.replace('T', ' ').substring(0, 19);
+                    }
+                }
+            } catch (e) {
+                console.warn("Failed to fetch internet time, falling back to computer time.", e);
+            }
+            // Fallback to local computer time formatted as YYYY-MM-DD HH:MM:SS
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+
         function showError(message) {
             const el = document.getElementById('error-alert');
             el.innerText = message;
@@ -512,7 +536,7 @@
                     contact: pContact,
                     condition: pCondition || null,
                     referred_for: pReferredFor || 'Physiotherapy',
-                    submitted_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
+                    submitted_at: await getIndianTime(),
                     status: 'Pending',
                     is_deleted: 0
                 };
