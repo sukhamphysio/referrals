@@ -422,14 +422,15 @@
                     selectEl.appendChild(opt);
                 });
 
-                // Check doc_id query parameter
-                const docId = getQueryParam('doc_id');
+                // Check doc_id, doctor_id, or doc query parameter
+                const docId = getQueryParam('doc_id') || getQueryParam('doctor_id') || getQueryParam('doc');
                 if (docId) {
                     const parsedId = parseInt(docId);
-                    const docMatch = doctors.find(d => d.id === parsedId);
+                    // Loose equality (==) allows matching string vs number representation
+                    const docMatch = doctors.find(d => d.id == parsedId || d.id == docId);
 
                     if (docMatch) {
-                        selectedDoctorId = parsedId;
+                        selectedDoctorId = docMatch.id;
                         document.getElementById('doctor-name-label').innerText = `Dr. ${docMatch.name}`;
                         document.getElementById('doctor-info-badge').style.display = 'inline-flex';
                         document.getElementById('doctor-select-group').style.display = 'none';
