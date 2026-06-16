@@ -329,8 +329,12 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="patient-name">Patient Full Name <span style="color: var(--color-accent);">*</span></label>
-                        <input type="text" id="patient-name" placeholder="e.g. Rahul Sharma" required>
+                        <label for="patient-first-name">First Name <span style="color: var(--color-accent);">*</span></label>
+                        <input type="text" id="patient-first-name" placeholder="e.g. Rahul" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="patient-last-name">Last Name <span style="color: var(--color-accent);">*</span></label>
+                        <input type="text" id="patient-last-name" placeholder="e.g. Sharma" required>
                     </div>
                 </div>
 
@@ -431,33 +435,29 @@
                 return;
             }
  
-            // Check doc_id, doctor_id, or doc query parameter
-            const docId = getQueryParam('doc_id') || getQueryParam('doctor_id') || getQueryParam('doc');
+            // Check doc_token, token, doc_id, doctor_id, or doc query parameter
+            const docParam = getQueryParam('doc_token') || getQueryParam('token') || getQueryParam('doc_id') || getQueryParam('doctor_id') || getQueryParam('doc');
             
-            if (!docId) {
+            if (!docParam) {
                 document.getElementById('frm-referral').style.display = 'none';
                 document.getElementById('doctor-info-badge').style.display = 'none';
                 showError("Personalized Link Required. Please use the direct referral link provided by Sukham Physiotherapy.");
                 return;
             }
  
-            const parsedId = parseInt(docId);
-            if (isNaN(parsedId)) {
-                document.getElementById('frm-referral').style.display = 'none';
-                showError("Invalid referral link. The link format is incorrect.");
-                return;
-            }
- 
             try {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 
-                // Fetch ONLY the specified doctor from Supabase
-                const { data: doctor, error } = await supabaseClient
-                    .from('doctors')
-                    .select('id, name')
-                    .eq('id', parsedId)
-                    .eq('is_deleted', 0)
-                    .maybeSingle();
+                // Fetch the specified doctor from Supabase by token or ID (fallback)
+                let query = supabaseClient.from('doctors').select('id, name').eq('is_deleted', 0);
+                const isNumeric = /^\d+$/.test(docParam);
+                if (isNumeric) {
+                    query = query.eq('id', parseInt(docParam));
+                } else {
+                    query = query.eq('referral_token', docParam);
+                }
+                
+                const { data: doctor, error } = await query.maybeSingle();
  
                 if (error) throw error;
  
@@ -534,18 +534,18 @@
 
             // Gather inputs
             const pPrefix = document.getElementById('patient-prefix').value;
-            const pName = document.getElementById('patient-name').value.trim();
+            const pFirstName = document.getElementById('patient-first-name').value.trim();
+            const pLastName = document.getElementById('patient-last-name').value.trim();
             const pAge = document.getElementById('patient-age').value;
             const pGender = document.getElementById('patient-gender').value;
             const pContact = document.getElementById('patient-contact').value.trim();
             const pCondition = document.getElementById('patient-condition').value.trim();
             const pReferredFor = document.getElementById('patient-referred-for').value.trim();
 
-            const fullName = `${pPrefix} ${pName}`.trim();
+            const fullName = `${pPrefix} ${pFirstName} ${pLastName}`.trim();
 
             // Check for identical first and last name
-            const names = getFirstAndLast(fullName);
-            if (names.first && names.last && names.first.toLowerCase() === names.last.toLowerCase()) {
+            if (pFirstName && pLastName && pFirstName.toLowerCase() === pLastName.toLowerCase()) {
                 showError("Duplicate Entry Alert: Patient cannot have the same first and last name.");
                 return;
             }
@@ -554,14 +554,20 @@
             try {
                 const { data: existingRefs, error: checkError } = await supabaseClient
                     .from('referrals')
-                    .select('patient_name')
+                    .select('patient_name, first_name, last_name')
                     .eq('is_deleted', 0);
                 if (checkError) throw checkError;
 
                 if (existingRefs) {
                     const isDup = existingRefs.some(ref => {
-                        const ext = getFirstAndLast(ref.patient_name);
-                        return ext.first.toLowerCase() === names.first.toLowerCase() && ext.last.toLowerCase() === names.last.toLowerCase();
+                        let f = (ref.first_name || '').trim().toLowerCase();
+                        let l = (ref.last_name || '').trim().toLowerCase();
+                        if (!f && !l) {
+                            const ext = getFirstAndLast(ref.patient_name);
+                            f = ext.first.toLowerCase();
+                            l = ext.last.toLowerCase();
+                        }
+                        return f === pFirstName.toLowerCase() && l === pLastName.toLowerCase();
                     });
                     if (isDup) {
                         showError("Duplicate Entry Alert: You are trying to post a duplicate entry of referral.");
@@ -582,6 +588,9 @@
                 const referralData = {
                     doctor_id: finalDocId,
                     patient_name: fullName,
+                    prefix: pPrefix,
+                    first_name: pFirstName,
+                    last_name: pLastName,
                     gender: pGender,
                     age: pAge ? parseInt(pAge) : null,
                     contact: pContact,
